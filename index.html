@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GPQ Statue Solver</title>
+
+  <!-- Styles (we'll create /assets/css/styles.css next) -->
+  <link rel="stylesheet" href="assets/css/styles.css" />
+
+  <!-- JS (we'll create these later) -->
+  <script defer src="assets/js/data.js"></script>
+  <script defer src="assets/js/solver.js"></script>
+  <script defer src="assets/js/app.js"></script>
+</head>
+
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header" role="banner">
+    <div class="container header-inner">
+      <div class="brand">
+        <h1 class="brand-title">GPQ Statue Solver</h1>
+        <p class="brand-subtitle">4 statues · Medal / Scroll / Food / Wine · Up to 7 tries</p>
+      </div>
+
+      <div class="status">
+        <div class="status-item">
+          <span class="status-label">Attempts</span>
+          <span class="status-value" id="attemptCount" aria-live="polite">0</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Remaining</span>
+          <span class="status-value" id="remainingCount" aria-live="polite">—</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="container" role="main">
+    <!-- Start Gate -->
+    <section class="panel start-panel" id="startPanel" aria-labelledby="startTitle">
+      <h2 id="startTitle">Ready to solve?</h2>
+      <p class="muted">
+        Press <strong>Begin</strong> to generate the first placement. After each GPQ attempt, enter the statue feedback
+        and press <strong>Try</strong> to get the next placement.
+      </p>
+
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="beginBtn">
+          Begin
+        </button>
+      </div>
+    </section>
+
+    <!-- Solver UI -->
+    <section class="panel solver-panel is-hidden" id="solverPanel" aria-labelledby="solverTitle">
+      <div class="panel-header">
+        <h2 id="solverTitle">Current Placement</h2>
+
+        <div class="panel-actions">
+          <button type="button" class="btn btn-ghost" id="resetBtn">
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Slots -->
+      <div class="slots" role="group" aria-label="Statue slots">
+        <!-- Slot 1 -->
+        <div class="slot" data-slot="1">
+          <div class="slot-label">Statue 1</div>
+          <div class="slot-card" aria-label="Statue 1 placement">
+            <img class="slot-icon" id="slotIcon1" src="" alt="" />
+            <div class="slot-name" id="slotName1">—</div>
+          </div>
+        </div>
+
+        <!-- Slot 2 -->
+        <div class="slot" data-slot="2">
+          <div class="slot-label">Statue 2</div>
+          <div class="slot-card" aria-label="Statue 2 placement">
+            <img class="slot-icon" id="slotIcon2" src="" alt="" />
+            <div class="slot-name" id="slotName2">—</div>
+          </div>
+        </div>
+
+        <!-- Slot 3 -->
+        <div class="slot" data-slot="3">
+          <div class="slot-label">Statue 3</div>
+          <div class="slot-card" aria-label="Statue 3 placement">
+            <img class="slot-icon" id="slotIcon3" src="" alt="" />
+            <div class="slot-name" id="slotName3">—</div>
+          </div>
+        </div>
+
+        <!-- Slot 4 -->
+        <div class="slot" data-slot="4">
+          <div class="slot-label">Statue 4</div>
+          <div class="slot-card" aria-label="Statue 4 placement">
+            <img class="slot-icon" id="slotIcon4" src="" alt="" />
+            <div class="slot-name" id="slotName4">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feedback Inputs -->
+      <form class="feedback" id="feedbackForm" autocomplete="off">
+        <fieldset class="feedback-fieldset">
+          <legend>Feedback (enter the counts you received)</legend>
+
+          <div class="feedback-grid">
+            <!-- Pleased -->
+            <div class="stepper" data-field="pleased">
+              <label class="stepper-label" for="pleasedInput">Pleased</label>
+              <div class="stepper-control">
+                <button type="button" class="stepper-btn" data-stepper="pleased" data-delta="-1" aria-label="Decrease pleased">
+                  ▼
+                </button>
+                <input
+                  id="pleasedInput"
+                  name="pleased"
+                  type="number"
+                  inputmode="numeric"
+                  min="0"
+                  max="4"
+                  value="0"
+                  aria-describedby="feedbackHint"
+                />
+                <button type="button" class="stepper-btn" data-stepper="pleased" data-delta="1" aria-label="Increase pleased">
+                  ▲
+                </button>
+              </div>
+            </div>
+
+            <!-- Incorrect -->
+            <div class="stepper" data-field="incorrect">
+              <label class="stepper-label" for="incorrectInput">Incorrect</label>
+              <div class="stepper-control">
+                <button type="button" class="stepper-btn" data-stepper="incorrect" data-delta="-1" aria-label="Decrease incorrect">
+                  ▼
+                </button>
+                <input
+                  id="incorrectInput"
+                  name="incorrect"
+                  type="number"
+                  inputmode="numeric"
+                  min="0"
+                  max="4"
+                  value="0"
+                  aria-describedby="feedbackHint"
+                />
+                <button type="button" class="stepper-btn" data-stepper="incorrect" data-delta="1" aria-label="Increase incorrect">
+                  ▲
+                </button>
+              </div>
+            </div>
+
+            <!-- Unknown -->
+            <div class="stepper" data-field="unknown">
+              <label class="stepper-label" for="unknownInput">Unknown</label>
+              <div class="stepper-control">
+                <button type="button" class="stepper-btn" data-stepper="unknown" data-delta="-1" aria-label="Decrease unknown">
+                  ▼
+                </button>
+                <input
+                  id="unknownInput"
+                  name="unknown"
+                  type="number"
+                  inputmode="numeric"
+                  min="0"
+                  max="4"
+                  value="0"
+                  aria-describedby="feedbackHint"
+                />
+                <button type="button" class="stepper-btn" data-stepper="unknown" data-delta="1" aria-label="Increase unknown">
+                  ▲
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p class="hint" id="feedbackHint">
+            Counts must add up to <strong>4</strong>.
+          </p>
+
+          <div class="feedback-footer">
+            <div class="validation" id="validationMessage" aria-live="polite"></div>
+
+            <button type="submit" class="btn btn-primary" id="tryBtn">
+              Try
+            </button>
+          </div>
+        </fieldset>
+      </form>
+
+      <!-- Result / Reset Notice -->
+      <section class="notice is-hidden" id="noticePanel" aria-live="polite"></section>
+
+      <!-- History -->
+      <section class="history" aria-labelledby="historyTitle">
+        <div class="history-header">
+          <h3 id="historyTitle">History</h3>
+          <button type="button" class="btn btn-ghost btn-small" id="clearHistoryBtn">
+            Clear
+          </button>
+        </div>
+
+        <ol class="history-list" id="historyList" aria-label="Attempt history">
+          <!-- populated by JS -->
+        </ol>
+      </section>
+    </section>
+
+    <!-- Footer note -->
+    <footer class="site-footer" role="contentinfo">
+      <p class="muted">
+        Tip: If you hit 7 attempts without solving, this will reset and start again from the first placement.
+      </p>
+      <p class="muted" style="margin-top: 10px;">
+        Built by Sarah (Miwk)
+      </p>
+    </footer>
+  </main>
+</body>
+</html>
