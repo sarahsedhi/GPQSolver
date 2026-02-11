@@ -490,3 +490,51 @@ input[type="number"]::-webkit-inner-spin-button {
     scroll-behavior: auto !important;
   }
 }
+
+/* --- Layout hardening (prevents solver panel from turning into a horizontal flex row) --- */
+#solverPanel,
+#solverPanel.solver-panel,
+.panel.solver-panel {
+  display: block !important;
+}
+
+#solverPanel > * {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Keep the header tidy even with extra buttons (Copy/Reset) */
+#solverPanel .panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+#solverPanel .panel-header h2 {
+  flex: 1 1 auto;
+  margin: 0;
+}
+
+#solverPanel .panel-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 10px;
+}
+
+/* Ensure sections stack vertically (slots -> feedback -> notice -> history) */
+#solverPanel .slots,
+#solverPanel .feedback,
+#solverPanel .notice,
+#solverPanel .history {
+  width: 100%;
+}
+
+/* History header alignment */
+#solverPanel .history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
