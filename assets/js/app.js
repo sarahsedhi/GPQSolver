@@ -232,6 +232,41 @@
     els.unknownInput.value = "0";
   }
 
+  function formatGuessForClipboard(guess) {
+  return guess.map((id) => itemById(id).label).join(", ");
+}
+
+async function copyTextToClipboard(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (_) {
+    // fall through
+  }
+
+  // Fallback for some browsers / local file runs
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.position = "fixed";
+  ta.style.left = "-9999px";
+  ta.style.top = "0";
+  document.body.appendChild(ta);
+  ta.select();
+
+  let ok = false;
+  try {
+    ok = document.execCommand("copy");
+  } catch (_) {
+    ok = false;
+  }
+
+  document.body.removeChild(ta);
+  return ok;
+}
+
   // -----------------------------
   // Core Flow
   // -----------------------------
@@ -376,10 +411,19 @@
     }
 
     state.currentGuess = next.slice();
-    renderGuess(state.currentGuess);
-    renderHistory();
-    updateHeaderStats();
-    setNotice("");
+renderGuess(state.currentGuess);
+renderHistory();
+updateHeaderStats();
+
+// Auto-copy the NEXT placement
+(async () => {
+  const text = formatGuessForClipboard(state.currentGuess);
+  const ok = await copyTextToClipboard(text);
+  setNotice(
+    ok ? "Next placement copied to clipboard." : "Next placement shown (clipboard blocked by browser).",
+    ok ? "success" : "warning"
+  );
+})();
   }
 
   // -----------------------------
