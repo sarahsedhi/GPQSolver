@@ -538,3 +538,52 @@ input[type="number"]::-webkit-inner-spin-button {
   justify-content: space-between;
   gap: 12px;
 }
+
+/* ===== HARD RESET FOR LAYOUT (fixes accidental flex on wrappers) ===== */
+
+#main,
+main,
+.container,
+.panel,
+#solverPanel,
+#solverPanel.solver-panel,
+.panel.solver-panel {
+  display: block !important;
+}
+
+/* Ensure solver panel content stacks vertically */
+#solverPanel > * {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Keep header as the only flex row */
+#solverPanel .panel-header {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#solverPanel .panel-actions {
+  display: flex !important;
+  gap: 10px;
+}
+
+/* Force these sections to be full-width stacked blocks */
+#solverPanel .slots,
+#solverPanel .feedback,
+#solverPanel .notice,
+#solverPanel .history {
+  display: block !important;
+  width: 100% !important;
+}
+
+/* Ensure the form doesn't collapse */
+#solverPanel form,
+#solverPanel fieldset {
+  width: 100% !important;
+  min-width: 0;
+}
