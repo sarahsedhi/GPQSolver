@@ -40,7 +40,6 @@
     resetBtn: $("#resetBtn"),
     tryBtn: $("#tryBtn"),
     clearHistoryBtn: $("#clearHistoryBtn"),
-    copyCurrentBtn: $("#copyCurrentBtn"),
 
     attemptCount: $("#attemptCount"),
     remainingCount: $("#remainingCount"),
@@ -62,40 +61,6 @@
       { icon: $("#slotIcon4"), name: $("#slotName4") },
     ],
   };
-
-  
-function formatGuessForClipboard(guess) {
-  return guess.map((id) => itemById(id).label).join(", ");
-}
-
-async function copyTextToClipboard(text) {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch (_) {
-    // fall through to legacy method
-  }
-
-  // Legacy fallback
-  const ta = document.createElement("textarea");
-  ta.value = text;
-  ta.setAttribute("readonly", "");
-  ta.style.position = "fixed";
-  ta.style.left = "-9999px";
-  ta.style.top = "0";
-  document.body.appendChild(ta);
-  ta.select();
-  let ok = false;
-  try {
-    ok = document.execCommand("copy");
-  } catch (_) {
-    ok = false;
-  }
-  document.body.removeChild(ta);
-  return ok;
-}
 
   // -----------------------------
   // Fallback Solver (optional)
@@ -253,12 +218,9 @@ async function copyTextToClipboard(text) {
       li.innerHTML = `
         <div class="history-row">
           <div class="history-guess">#${entry.turn}: ${guessText}</div>
-          <button type="button" class="btn btn-ghost btn-small" data-copy-turn="${entry.turn}">
-            Copy
-          </button>
+          <div class="history-feedback">P ${entry.feedback.pleased} · I ${entry.feedback.incorrect} · U ${entry.feedback.unknown} · Remaining ${entry.remaining}</div>
         </div>
-      <div class="history-feedback">P ${entry.feedback.pleased} · I ${entry.feedback.incorrect} · U ${entry.feedback.unknown} · Remaining ${entry.remaining}</div>
-    `;
+      `;
 
       els.historyList.appendChild(li);
     }
@@ -462,29 +424,9 @@ async function copyTextToClipboard(text) {
       setNotice("History cleared.", "info");
     });
 
-    els.copyCurrentBtn.addEventListener("click", async () => {
-    if (!state.started || !state.currentGuess) return;
-    const text = formatGuessForClipboard(state.currentGuess);
-    const ok = await copyTextToClipboard(text);
-    setNotice(ok ? "Copied current placement to clipboard." : "Copy failed (browser blocked clipboard).", ok ? "success" : "warning");
-    });
-
     els.feedbackForm.addEventListener("submit", (ev) => {
       ev.preventDefault();
       onTry();
-    });
-
-    els.historyList.addEventListener("click", async (ev) => {
-    const btn = ev.target.closest("[data-copy-turn]");
-    if (!btn) return;
-
-    const turn = Number.parseInt(btn.getAttribute("data-copy-turn"), 10);
-    const entry = state.history.find((h) => h.turn === turn);
-    if (!entry) return;
-
-    const text = formatGuessForClipboard(entry.guess);
-    const ok = await copyTextToClipboard(text);
-    setNotice(ok ? `Copied try #${turn} to clipboard.` : "Copy failed (browser blocked clipboard).", ok ? "success" : "warning");
     });
 
     // Light validation as user types
