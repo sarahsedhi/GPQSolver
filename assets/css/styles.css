@@ -490,3 +490,39 @@ input[type="number"]::-webkit-inner-spin-button {
     scroll-behavior: auto !important;
   }
 }
+
+/* -----------------------------
+   No Candidates Modal
+----------------------------- */
+.modal.is-hidden { display: none; }
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: 9999;
+}
+
+.modal-card {
+  width: min(520px, calc(100vw - 32px));
+  background: rgba(10, 14, 24, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 18px 18px 16px;
+  box-shadow: 0 10px 50px rgba(0,0,0,0.45);
+}
+
+.modal-card h2 { margin: 0 0 8px; }
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.modal-actions .danger {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}

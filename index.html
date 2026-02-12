@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GPQ Statue Solver</title>
 
-  <!-- Styles (we'll create /assets/css/styles.css next) -->
+  <!-- CSS -->
   <link rel="stylesheet" href="assets/css/styles.css" />
 
-  <!-- JS (we'll create these later) -->
+  <!-- JavaScript  -->
   <script defer src="assets/js/data.js"></script>
   <script defer src="assets/js/solver.js"></script>
   <script defer src="assets/js/app.js"></script>
@@ -21,7 +21,7 @@
     <div class="container header-inner">
       <div class="brand">
         <h1 class="brand-title">GPQ Statue Solver</h1>
-        <p class="brand-subtitle">4 statues · Medal / Scroll / Food / Wine · Up to 7 tries</p>
+        <p class="brand-subtitle">4 statues (1, 2, 3, 4) · Medal / Scroll / Food / Wine · Up to 7 tries</p>
       </div>
 
       <div class="status">
@@ -42,8 +42,9 @@
     <section class="panel start-panel" id="startPanel" aria-labelledby="startTitle">
       <h2 id="startTitle">Ready to solve?</h2>
       <p class="muted">
-        Press <strong>Begin</strong> to generate the first placement. After each GPQ attempt, enter the statue feedback
-        and press <strong>Try</strong> to get the next placement.
+        Press <strong>Begin</strong> to generate the first placement. After each attempt, enter the statue feedback
+        and press <strong>Try</strong> to get the next placement. The item placement order will automatically be copied 
+        to clipboard after each attempt.
       </p>
 
       <div class="actions">
@@ -218,9 +219,26 @@
         Tip: If you hit 7 attempts without solving, this will reset and start again from the first placement.
       </p>
       <p class="muted" style="margin-top: 10px;">
+        Version 0.2.0-beta.1
         Built by Sarah (Miwk), Tested by Nyahaha
       </p>
     </footer>
   </main>
+
+  <!-- No Candidates Modal -->
+  <div id="noCandidatesModal" class="modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="noCandTitle">
+    <div class="modal-card">
+      <h2 id="noCandTitle">No candidates remain</h2>
+      <p>
+        Please double-check the counts (Pleased / Incorrect / Unknown) 
+        for the last guess or restart from the beginning!
+      </p>
+      <div class="modal-actions">
+        <button id="btnEditFeedback" type="button">Cancel</button>
+        <button id="btnRestartFromModal" type="button" class="danger">Restart</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

@@ -41,6 +41,11 @@
     tryBtn: $("#tryBtn"),
     clearHistoryBtn: $("#clearHistoryBtn"),
 
+    // No-candidates modal
+    noCandidatesModal: $("#noCandidatesModal"),
+    btnEditFeedback: $("#btnEditFeedback"),
+    btnRestartFromModal: $("#btnRestartFromModal"),
+
     attemptCount: $("#attemptCount"),
     remainingCount: $("#remainingCount"),
 
@@ -173,6 +178,21 @@
     els.noticePanel.innerHTML = `<div><strong>${prefix}</strong> ${html}</div>`;
   }
 
+  // -----------------------------
+  // No-candidates modal helpers
+  // -----------------------------
+  function showNoCandidatesModal() {
+    if (!els.noCandidatesModal) return;
+    els.noCandidatesModal.classList.remove("is-hidden");
+    if (els.tryBtn) els.tryBtn.disabled = true;
+  }
+
+  function hideNoCandidatesModal() {
+    if (!els.noCandidatesModal) return;
+    els.noCandidatesModal.classList.add("is-hidden");
+    if (els.tryBtn) els.tryBtn.disabled = false;
+  }
+
   function setValidation(msg, variant = "muted") {
     els.validationMessage.textContent = msg || "";
     // Optional: future styling hooks
@@ -271,6 +291,7 @@ async function copyTextToClipboard(text) {
   // Core Flow
   // -----------------------------
   function hardReset(reason = "") {
+    hideNoCandidatesModal();
     state.attempts = 0;
     state.started = false;
     state.history = [];
@@ -343,8 +364,7 @@ async function copyTextToClipboard(text) {
 
   function onTry() {
     if (!state.started) return;
-
-    // Attempt gating: increment ONLY on Try
+    // Attempt gating: compute next attempt, but do NOT commit it until feedback is consistent
     const nextAttempt = state.attempts + 1;
     if (nextAttempt > MAX_TURNS) {
       hardReset(`Exceeded ${MAX_TURNS} tries.`);
@@ -358,11 +378,11 @@ async function copyTextToClipboard(text) {
       return;
     }
 
-    state.attempts = nextAttempt;
     setValidation("");
 
     // If solved
     if (fb.pleased === 4) {
+      state.attempts = nextAttempt;
       state.history.push({
         turn: state.attempts,
         guess: state.currentGuess.slice(),
@@ -374,9 +394,21 @@ async function copyTextToClipboard(text) {
       setNotice(`Solved in ${state.attempts} ${state.attempts === 1 ? "try" : "tries"}.`, "success");
       return;
     }
-
-    // Filter candidates based on feedback
+    // Filter candidates based on feedback (preview first; do not mutate state on impossible feedback)
     const filtered = Solver.filterCandidates(state.candidates, state.currentGuess, fb);
+
+    if (filtered.length === 0) {
+      // Do NOT consume an attempt or wipe progress—prompt user to correct feedback or restart.
+      setValidation("That feedback is impossible given prior tries. Please double-check the counts.", "danger");
+      setNotice("No candidates remain. You can edit the feedback or restart.", "warning");
+      showNoCandidatesModal();
+      return;
+    }
+
+    hideNoCandidatesModal();
+
+    // Commit the attempt only after we know feedback is consistent
+    state.attempts = nextAttempt;
 
     state.history.push({
       turn: state.attempts,
@@ -386,13 +418,6 @@ async function copyTextToClipboard(text) {
     });
 
     state.candidates = filtered;
-
-    if (state.candidates.length === 0) {
-      renderHistory();
-      updateHeaderStats();
-      hardReset("No candidates remain (feedback sequence is inconsistent).");
-      return;
-    }
 
     if (state.attempts >= MAX_TURNS) {
       renderHistory();
@@ -473,7 +498,22 @@ updateHeaderStats();
       onTry();
     });
 
-    // Light validation as user types
+    
+    // No-candidates modal actions
+    if (els.btnEditFeedback) {
+      els.btnEditFeedback.addEventListener("click", () => {
+        hideNoCandidatesModal();
+        setNotice("Adjust the feedback and try again.", "warning");
+      });
+    }
+    if (els.btnRestartFromModal) {
+      els.btnRestartFromModal.addEventListener("click", () => {
+        hideNoCandidatesModal();
+        hardReset("Restarted.");
+      });
+    }
+
+// Light validation as user types
     const onInput = () => {
       const fb = parseFeedback();
       const err = validateFeedback(fb);
