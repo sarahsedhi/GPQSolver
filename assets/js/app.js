@@ -36,15 +36,11 @@
   const els = {
     startPanel: $("#startPanel"),
     solverPanel: $("#solverPanel"),
-    beginBtn: $("#beginBtn"),
+    normalBtn: $("#normalBtn"),
+    turboBtn: $("#turboBtn"),
     resetBtn: $("#resetBtn"),
     tryBtn: $("#tryBtn"),
     clearHistoryBtn: $("#clearHistoryBtn"),
-
-    // No-candidates modal
-    noCandidatesModal: $("#noCandidatesModal"),
-    btnEditFeedback: $("#btnEditFeedback"),
-    btnRestartFromModal: $("#btnRestartFromModal"),
 
     attemptCount: $("#attemptCount"),
     remainingCount: $("#remainingCount"),
@@ -150,6 +146,7 @@
     allCandidates: [],
     candidates: [],
     started: false,
+    mode: "normal", // "normal" | "turbo"
     history: [],
   };
 
@@ -176,21 +173,6 @@
         : "ℹ️";
 
     els.noticePanel.innerHTML = `<div><strong>${prefix}</strong> ${html}</div>`;
-  }
-
-  // -----------------------------
-  // No-candidates modal helpers
-  // -----------------------------
-  function showNoCandidatesModal() {
-    if (!els.noCandidatesModal) return;
-    els.noCandidatesModal.classList.remove("is-hidden");
-    if (els.tryBtn) els.tryBtn.disabled = true;
-  }
-
-  function hideNoCandidatesModal() {
-    if (!els.noCandidatesModal) return;
-    els.noCandidatesModal.classList.add("is-hidden");
-    if (els.tryBtn) els.tryBtn.disabled = false;
   }
 
   function setValidation(msg, variant = "muted") {
@@ -291,7 +273,6 @@ async function copyTextToClipboard(text) {
   // Core Flow
   // -----------------------------
   function hardReset(reason = "") {
-    hideNoCandidatesModal();
     state.attempts = 0;
     state.started = false;
     state.history = [];
@@ -362,14 +343,21 @@ async function copyTextToClipboard(text) {
     return "";
   }
 
+  function computeAllowedSymbolsFromCandidates(candidates) {
+    const allowed = new Set();
+    for (const code of candidates) {
+      for (const sym of code) allowed.add(sym);
+    }
+    return allowed;
+  }
+
+  function restrictCodesToSymbols(codes, allowedSet) {
+    return codes.filter((code) => code.every((sym) => allowedSet.has(sym)));
+  }
+
+
   function onTry() {
     if (!state.started) return;
-    // Attempt gating: compute next attempt, but do NOT commit it until feedback is consistent
-    const nextAttempt = state.attempts + 1;
-    if (nextAttempt > MAX_TURNS) {
-      hardReset(`Exceeded ${MAX_TURNS} tries.`);
-      return;
-    }
 
     const fb = parseFeedback();
     const err = validateFeedback(fb);
@@ -378,37 +366,55 @@ async function copyTextToClipboard(text) {
       return;
     }
 
-    setValidation("");
-
-    // If solved
+    // If solved, record the attempt and finish (do not filter).
     if (fb.pleased === 4) {
+      const nextAttempt = state.attempts + 1;
+      if (nextAttempt > MAX_TURNS) {
+        hardReset(`Exceeded ${MAX_TURNS} tries.`);
+        return;
+      }
+
       state.attempts = nextAttempt;
+      setValidation("");
+
       state.history.push({
         turn: state.attempts,
         guess: state.currentGuess.slice(),
         feedback: fb,
         remaining: state.candidates.length,
       });
+
       renderHistory();
       updateHeaderStats();
       setNotice(`Solved in ${state.attempts} ${state.attempts === 1 ? "try" : "tries"}.`, "success");
       return;
     }
-    // Filter candidates based on feedback (preview first; do not mutate state on impossible feedback)
-    const filtered = Solver.filterCandidates(state.candidates, state.currentGuess, fb);
 
+    // Preview filter FIRST (no state changes yet). If feedback is inconsistent, prompt instead of hard-resetting.
+    const filtered = Solver.filterCandidates(state.candidates, state.currentGuess, fb);
     if (filtered.length === 0) {
-      // Do NOT consume an attempt or wipe progress—prompt user to correct feedback or restart.
       setValidation("That feedback is impossible given prior tries. Please double-check the counts.", "danger");
-      setNotice("No candidates remain. You can edit the feedback or restart.", "warning");
-      showNoCandidatesModal();
+      const ok = window.confirm(
+        "No candidates remain. This usually means a feedback entry is incorrect.\n\n" +
+        "Press OK to restart, or Cancel to go back and edit the feedback."
+      );
+      if (ok) {
+        hardReset("Restarted due to inconsistent feedback.");
+      } else {
+        setNotice("Adjust the feedback and click Try again.", "warning");
+      }
       return;
     }
 
-    hideNoCandidatesModal();
-
-    // Commit the attempt only after we know feedback is consistent
+    // Now commit the attempt (Try consumes a turn only if feedback is consistent).
+    const nextAttempt = state.attempts + 1;
+    if (nextAttempt > MAX_TURNS) {
+      hardReset(`Exceeded ${MAX_TURNS} tries.`);
+      return;
+    }
     state.attempts = nextAttempt;
+    setValidation("");
+    setNotice("");
 
     state.history.push({
       turn: state.attempts,
@@ -419,15 +425,24 @@ async function copyTextToClipboard(text) {
 
     state.candidates = filtered;
 
+    renderHistory();
+    updateHeaderStats();
+
     if (state.attempts >= MAX_TURNS) {
-      renderHistory();
-      updateHeaderStats();
       hardReset(`Reached ${MAX_TURNS} tries without solving.`);
       return;
     }
 
     // Pick next guess
-    const next = Solver.pickNextGuess(state.candidates, state.allCandidates);
+    let next;
+    if (state.mode === "turbo") {
+      const allowed = computeAllowedSymbolsFromCandidates(state.candidates);
+      const pool = restrictCodesToSymbols(state.allCandidates, allowed);
+      next = Solver.pickNextGuess(state.candidates, pool);
+    } else {
+      next = Solver.pickNextGuess(state.candidates, state.allCandidates);
+    }
+
     if (!next) {
       renderHistory();
       updateHeaderStats();
@@ -436,24 +451,22 @@ async function copyTextToClipboard(text) {
     }
 
     state.currentGuess = next.slice();
-renderGuess(state.currentGuess);
-renderHistory();
-updateHeaderStats();
+    renderGuess(state.currentGuess);
+    renderHistory();
+    updateHeaderStats();
 
-// Auto-copy the NEXT placement
-(async () => {
-  const text = formatGuessForClipboard(state.currentGuess);
-  const ok = await copyTextToClipboard(text);
-  setNotice(
-    ok ? "Next placement copied to clipboard." : "Next placement shown (clipboard blocked by browser).",
-    ok ? "success" : "warning"
-  );
-})();
+    // Auto-copy the NEXT placement
+    (async () => {
+      const text = formatGuessForClipboard(state.currentGuess);
+      const ok = await copyTextToClipboard(text);
+      setNotice(
+        ok ? "Next placement copied to clipboard." : "Next placement shown (clipboard blocked by browser).",
+        ok ? "success" : "warning"
+      );
+    })();
   }
 
-  // -----------------------------
-  // Stepper behavior
-  // -----------------------------
+
   function adjustStepper(field, delta) {
     const input =
       field === "pleased"
@@ -484,7 +497,14 @@ updateHeaderStats();
   // Event Wiring
   // -----------------------------
   function bindEvents() {
-    els.beginBtn.addEventListener("click", begin);
+    els.normalBtn.addEventListener("click", () => {
+      state.mode = "normal";
+      begin();
+    });
+    els.turboBtn.addEventListener("click", () => {
+      state.mode = "turbo";
+      begin();
+    });
 
     els.resetBtn.addEventListener("click", () => hardReset("Manual reset."));
     els.clearHistoryBtn.addEventListener("click", () => {
@@ -498,22 +518,7 @@ updateHeaderStats();
       onTry();
     });
 
-    
-    // No-candidates modal actions
-    if (els.btnEditFeedback) {
-      els.btnEditFeedback.addEventListener("click", () => {
-        hideNoCandidatesModal();
-        setNotice("Adjust the feedback and try again.", "warning");
-      });
-    }
-    if (els.btnRestartFromModal) {
-      els.btnRestartFromModal.addEventListener("click", () => {
-        hideNoCandidatesModal();
-        hardReset("Restarted.");
-      });
-    }
-
-// Light validation as user types
+    // Light validation as user types
     const onInput = () => {
       const fb = parseFeedback();
       const err = validateFeedback(fb);
